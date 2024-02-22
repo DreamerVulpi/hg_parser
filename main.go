@@ -1,11 +1,15 @@
 package main
 
 import (
-	"hg_parser/web_scraper"
+	telegramBot "hg_parser/bot"
 	"log/slog"
 )
 
 func main() {
 	slog.Info("Start program..")
-	web_scraper.Parse("")
+	bot, err := telegramBot.Init()
+	if err != nil {
+		slog.Warn(err.Error())
+	}
+	telegramBot.Work(bot)
 }
