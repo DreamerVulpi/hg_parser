@@ -7,17 +7,14 @@ import (
 )
 
 type Product struct {
-	Name  string `json:"name"`
-	Img   string `json:"img"`
-	Price string `json:"price"`
-	Link  string `json:"link"`
+	Name         string `json:"name"`
+	Img          string `json:"img"`
+	Price        string `json:"price"`
+	CountPlayers string `json:"countPlayers"`
+	TimeSession  string `json:"timeSession"`
+	AgePlayers   string `json:"agePlayers"`
+	Link         string `json:"link"`
 }
-
-const (
-	base       = "https://hobbygames.ru"
-	catalog    = "/catalog/search"
-	boardgames = "/nastolnie"
-)
 
 func Init() *colly.Collector {
 	c := colly.NewCollector(

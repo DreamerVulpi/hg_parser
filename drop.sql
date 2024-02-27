@@ -1,0 +1,1 @@
+DROP TABLE lists_config, lists_users, users
