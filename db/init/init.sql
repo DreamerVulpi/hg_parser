@@ -1,0 +1,4 @@
+CREATE USER main WITH PASSWORD '123';
+GRANT ALL ON SCHEMA public TO main;
+CREATE DATABASE hg_bot_config;
+GRANT ALL PRIVILEGES ON DATABASE hg_bot_config to main;

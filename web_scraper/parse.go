@@ -37,7 +37,7 @@ func getProduct(e *colly.HTMLElement, filter map[string]string) (Product, error)
 		element.CountPlayers = e.ChildText("div.params__item.players span")
 		element.TimeSession = e.ChildText("div.params__item.time span")
 		element.AgePlayers = e.ChildText("div.age__number")
-		if biggerPrice(element.Price, filter["price"]) && agePlayers(element.AgePlayers, filter["ageMin"]) && countPlayers(element.CountPlayers, filter["countPlayer"]) && timeSession(element.TimeSession, filter["timeSession"]) {
+		if biggerPrice(element.Price, filter["price"]) && agePlayers(element.AgePlayers, filter["age"]) && countPlayers(element.CountPlayers, filter["countplayers"]) && timeSession(element.TimeSession, filter["timesession"]) {
 			return element, nil
 		}
 	}
@@ -50,7 +50,7 @@ func biggerPrice(priceStr, filterPrice string) bool {
 		temp := strings.Replace(priceStr, "₽", "", -1)
 		price, _ := strconv.Atoi(strings.Replace(temp, " ", "", -1))
 		slog.Info(strings.Replace(temp, " ", "", -1))
-		return filter <= price
+		return filter >= price || filter == 0
 	}
 	return false
 }
@@ -62,7 +62,7 @@ func isAvailiable(price string) bool {
 func agePlayers(ageStr, filterAge string) bool {
 	filter, _ := strconv.Atoi(filterAge)
 	age, _ := strconv.Atoi(strings.Replace(ageStr, "+", "", -1))
-	return filter <= age // TODO: Child filter
+	return filter >= age || filter == 0
 }
 
 func countPlayers(countPlayersStr, filterCountPlayers string) bool {
@@ -71,10 +71,10 @@ func countPlayers(countPlayersStr, filterCountPlayers string) bool {
 		sliceCountPlayers := strings.Split(countPlayersStr, "-")
 		countPlayersMin, _ := strconv.Atoi(sliceCountPlayers[0])
 		countPlayersMax, _ := strconv.Atoi(sliceCountPlayers[1])
-		return countPlayersMin <= filter && filter <= countPlayersMax || filter == 0
+		return countPlayersMax >= filter && filter >= countPlayersMin || filter == 0 || filter >= 18
 	}
 	countPlayers, _ := strconv.Atoi(strings.Replace(countPlayersStr, "+", "", -1))
-	return filter <= countPlayers || countPlayers == 0
+	return filter >= countPlayers || filter == 0 || filter >= 18
 }
 
 func timeSession(timeSessionStr, filterTimeSession string) bool {
@@ -86,23 +86,20 @@ func timeSession(timeSessionStr, filterTimeSession string) bool {
 		return timeSessionMax >= filter && filter >= timeSessionMin || filter == 0
 	}
 	timeSession, _ := strconv.Atoi(strings.Replace(timeSessionStr, "+", "", -1))
-	return filter <= timeSession || filter == 0
+	return filter >= timeSession || filter == 0
 }
 
 func ParseProducts(collector *colly.Collector, filter map[string]string, search string) []Product {
 	keyword := fmt.Sprintf("keyword=%s", search)
 	link := base + catalog + "?" + keyword
 	sliceProducts := make([]Product, 0)
-	sliceTest := make([]Product, 0)
 
 	collector.OnHTML("div.product-item__content", func(e *colly.HTMLElement) {
 		product, err := getProduct(e, filter)
 		if err != nil {
 			return
 		}
-		sliceTest = append(sliceTest, product)
-		//sliceProducts = append(sliceProducts, element)
-		// sliceTest = append(sliceTest, Filter(&element, map[string]string{"AgeMin": "12"}))
+		sliceProducts = append(sliceProducts, product)
 
 	})
 
@@ -120,6 +117,7 @@ func ParseProducts(collector *colly.Collector, filter map[string]string, search 
 	collector.OnRequest(func(r *colly.Request) {
 		slog.Info("Посещение: " + link)
 	})
+
 	collector.OnResponse(func(r *colly.Response) {
 		slog.Info("Страница посещена:" + link)
 	})

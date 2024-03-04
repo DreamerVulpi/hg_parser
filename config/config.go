@@ -11,6 +11,8 @@ type Postgres struct {
 	Password string `mapstructure:"password"`
 	DBname   string `mapstructure:"dbname"`
 	Sslmode  string `mapstructure:"sslmode"`
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
 }
 
 type AppConfig struct {
@@ -32,6 +34,8 @@ func Load(config *AppConfig) error {
 		slog.Warn(err.Error())
 		return err
 	} else {
+		config.Postgres.Host = v.GetString("postgres.host")
+		config.Postgres.Port = v.GetString("postgres.port")
 		config.BotSecretKey = v.GetString("telegrambot.secretkey")
 		config.Postgres.User = v.GetString("postgres.user")
 		config.Postgres.Password = v.GetString("postgres.password")

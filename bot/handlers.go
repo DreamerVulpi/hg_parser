@@ -1,93 +1,58 @@
 package bot
 
 import (
+	"context"
 	"database/sql"
-	"hg_parser/db"
-	"hg_parser/web_scraper"
-	"log/slog"
 
 	telegramBot "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/gocolly/colly"
+	"github.com/looplab/fsm"
 )
 
 func handleCommand(bot *telegramBot.BotAPI, conn *sql.DB, update *telegramBot.Update) error {
-	collector := web_scraper.Init()
-
 	msg := telegramBot.NewMessage(update.Message.Chat.ID, update.Message.Text)
 
-	// TODO: Add commands /help, /filter, /settings
 	switch update.Message.Command() {
 	case "search":
-		return commandSearch(collector, update.Message.Text)
+		return commandSearch(bot, &msg)
+	case "filter":
+		return commandFilter(bot, conn, &msg, update.Message.Chat.ID)
 	case "start":
-		return commandStart(&msg, bot)
-	case "register":
-		return commandRegistrationAccount(update, conn, &msg, bot)
-	case "login":
-		return commandLogInAccount(update, conn, &msg, bot)
+		return commandStart(&msg, conn, update.Message.Chat.ID, bot)
+	case "help":
+		return commandHelp(&msg, bot)
 	default:
-		return unknownCommand(&msg, bot)
+		return unknown(&msg, bot)
 	}
 }
 
-func commandSearch(c *colly.Collector, keyword string) error {
-	// TODO: Get list-filter from user account <- postgres
-	// Example list-filter
-	filter := map[string]string{
-		"price":       "3000",
-		"ageMin":      "12",
-		"countPlayer": "2",
-		"timeSession": "60",
-	}
-	// Debug parser
-	web_scraper.WriteJSON(web_scraper.ParseProducts(c, filter, keyword))
+func handleKeyboardButton(bot *telegramBot.BotAPI, conn *sql.DB, update *telegramBot.Update, ctx context.Context, fsm *fsm.FSM) error {
+	msg := telegramBot.NewMessage(update.Message.Chat.ID, update.Message.Text)
 
-	// Code for send messages from bot to user
-	// result := web_scraper.ParseProducts(collector, update.Message.Text)
-	// for _, element := range result {
-	// 	text := element.Name + "\n" + element.Price + "\n" + element.Link + "\n" + element.AgePlayers + "\n" + element.CountPlayers + "\n" + element.TimeSession
-	// 	slog.Info(text)
-	// 	telegramBot.NewInputMediaPhoto(telegramBot.FileURL(element.Img))
-	// 	msg.Text = text
-	// 	bot.Send(msg)
-	// }
-	return nil
-}
+	switch update.Message.Text {
+	case SearchMenu.Keyboard[0][0].Text:
+		return buttonSearchProducts(fsm, ctx, bot, update)
+	case SearchMenu.Keyboard[0][1].Text:
+		return buttonFilter(bot, conn, update.Message.Chat.ID, &msg)
 
-func commandStart(msg *telegramBot.MessageConfig, bot *telegramBot.BotAPI) error {
-	msg.Text = "For using this bot you are need log in an account service.\n Don't know commands? Check list commands, just write /help"
-	_, err := bot.Send(msg)
-	return err
-}
+	case FilterMenu.Keyboard[0][0].Text:
+		return buttonUpdatePrice(fsm, ctx, bot, update)
+	case FilterMenu.Keyboard[0][1].Text:
+		return buttonUpdateAge(fsm, ctx, bot, update)
+	case FilterMenu.Keyboard[0][2].Text:
+		return buttonUpdateCountPlayers(fsm, ctx, bot, update)
+	case FilterMenu.Keyboard[0][3].Text:
+		return buttonUpdateTimesession(fsm, ctx, bot, update)
 
-func commandRegistrationAccount(update *telegramBot.Update, conn *sql.DB, msg *telegramBot.MessageConfig, bot *telegramBot.BotAPI) error {
-	if update.Message.Text != "" {
-		err := db.RegisterAccount(conn, update.Message.From.UserName, update.Message.Text)
-		if err != nil {
-			slog.Warn(err.Error())
-			msg.Text = "Account is registred already. Log in, please"
-			bot.Send(msg)
+	default:
+		if err := eventsButtons(fsm, conn, bot, update, ctx, &msg); err != nil {
 			return err
 		}
+		return nil
 	}
-	return nil
 }
 
-func commandLogInAccount(update *telegramBot.Update, conn *sql.DB, msg *telegramBot.MessageConfig, bot *telegramBot.BotAPI) error {
-	_, err := db.GetUser(conn, update.Message.From.UserName, update.Message.Text)
-	if err != nil {
-		slog.Warn(err.Error())
-		msg.Text = "Log in is failded. Try again"
-		bot.Send(msg)
-		return err
-	}
-	msg.Text = "Success!"
-	bot.Send(msg)
-	return nil
-}
-
-func unknownCommand(msg *telegramBot.MessageConfig, bot *telegramBot.BotAPI) error {
-	msg.Text = "Unknown command"
+func unknown(msg *telegramBot.MessageConfig, bot *telegramBot.BotAPI) error {
+	msg.Text = "Unknown data"
 	bot.Send(msg)
 	return nil
 }

@@ -1,0 +1,10 @@
+  telegrambot:
+    secretkey: "secretkey"
+  postgres:
+    user: main
+    password: 123
+    dbname: hg_bot_config
+    sslmode: disable
+    host: postgres_db
+    port: 5432
+    
