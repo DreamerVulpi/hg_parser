@@ -30,6 +30,7 @@ func WriteJSON(data []Product) {
 func getProduct(e *colly.HTMLElement, filter map[string]string) (Product, error) {
 	var element Product
 	element.Price = e.ChildText("span.price")
+	filterName := []string{"(для", "фигурка", "мармелад", "бустер", "протекторы", "краска", "брелок", "драже", "booster"}
 	if isAvailiable(element.Price) {
 		element.Name = e.ChildAttr("div.name-desc a", "title")
 		element.Img = e.ChildAttr("div.image a picture img", "src")
@@ -37,11 +38,27 @@ func getProduct(e *colly.HTMLElement, filter map[string]string) (Product, error)
 		element.CountPlayers = e.ChildText("div.params__item.players span")
 		element.TimeSession = e.ChildText("div.params__item.time span")
 		element.AgePlayers = e.ChildText("div.age__number")
-		if biggerPrice(element.Price, filter["price"]) && agePlayers(element.AgePlayers, filter["age"]) && countPlayers(element.CountPlayers, filter["countplayers"]) && timeSession(element.TimeSession, filter["timesession"]) {
+		if filter["switch"] == "true" {
+			if ignoreGarbage(filterName, element.Name) && biggerPrice(element.Price, filter["price"]) && agePlayers(element.AgePlayers, filter["age"]) && countPlayers(element.CountPlayers, filter["countplayers"]) && timeSession(element.TimeSession, filter["timesession"]) {
+				return element, nil
+			}
+		}
+		if filter["switch"] == "false" {
 			return element, nil
 		}
+
 	}
 	return Product{}, fmt.Errorf("Product out of stock")
+}
+
+func ignoreGarbage(filterArr []string, nameProduct string) bool {
+	for _, garbage := range filterArr {
+		if strings.Contains(strings.ToLower(nameProduct), garbage) {
+			slog.Info(strings.ToLower(nameProduct) + " == " + garbage)
+			return false
+		}
+	}
+	return true
 }
 
 func biggerPrice(priceStr, filterPrice string) bool {

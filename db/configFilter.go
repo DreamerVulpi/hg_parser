@@ -22,8 +22,13 @@ func UpdateTimeSession(conn *sql.DB, chat_id int64, timesession string) error {
 	return err
 }
 
+func UpdateStateFilter(conn *sql.DB, chat_id int64, status string) error {
+	_, err := conn.Exec("UPDATE lists_config lc SET switch=$1 FROM lists_users lu WHERE lc.id = lu.list_id AND lu.user_id = $2", status, GetUserID(conn, chat_id))
+	return err
+}
+
 func GetConfig(conn *sql.DB, chat_id int64) (map[string]string, error) {
-	row, err := conn.Query("SELECT lc.id, lc.price, lc.age, lc.countplayers, lc.timesession FROM lists_config lc INNER JOIN lists_users lu ON lc.id = lu.list_id WHERE lu.user_id = $1;", GetUserID(conn, chat_id))
+	row, err := conn.Query("SELECT lc.id, lc.price, lc.age, lc.countplayers, lc.timesession, lc.switch FROM lists_config lc INNER JOIN lists_users lu ON lc.id = lu.list_id WHERE lu.user_id = $1;", GetUserID(conn, chat_id))
 	if err != nil {
 		slog.Warn(err.Error())
 		return map[string]string{}, err
@@ -32,8 +37,8 @@ func GetConfig(conn *sql.DB, chat_id int64) (map[string]string, error) {
 
 	result := map[string]string{}
 	if row.Next() {
-		var id, price, age, countplayers, timesession string
-		err := row.Scan(&id, &price, &age, &countplayers, &timesession)
+		var id, price, age, countplayers, timesession, status string
+		err := row.Scan(&id, &price, &age, &countplayers, &timesession, &status)
 		if err != nil {
 			return map[string]string{}, err
 		}
@@ -42,6 +47,12 @@ func GetConfig(conn *sql.DB, chat_id int64) (map[string]string, error) {
 		result["age"] = age
 		result["countplayers"] = countplayers
 		result["timesession"] = timesession
+
+		if status == "1" {
+			result["switch"] = "Активен"
+		} else {
+			result["switch"] = "Выключен"
+		}
 	}
 	return result, err
 }

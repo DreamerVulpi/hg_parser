@@ -30,7 +30,7 @@ func RegisterAccount(conn *sql.DB, chat_id int64) error {
 		}
 
 		var list_id int
-		err = conn.QueryRow("INSERT INTO lists_config (price, age, countplayers, timesession) VALUES ($1, $2, $3, $4) RETURNING id;", 0, 0, 0, 0).Scan(&list_id)
+		err = conn.QueryRow("INSERT INTO lists_config (price, age, countplayers, timesession, switch) VALUES ($1, $2, $3, $4, $5) RETURNING id;", 0, 0, 0, 0, "false").Scan(&list_id)
 		if err != nil {
 			return err
 		}

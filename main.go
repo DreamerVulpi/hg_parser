@@ -36,10 +36,10 @@ func main() {
 	if err != nil {
 		slog.Warn(err.Error())
 	}
-
-	bot, err := telegramBot.Init(conf.BotSecretKey)
+	var bot telegramBot.Bot
+	err = bot.Init(conf.BotSecretKey, conn)
 	if err != nil {
 		slog.Warn(err.Error())
 	}
-	telegramBot.Start(conn, bot)
+	bot.Start()
 }

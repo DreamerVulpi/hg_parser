@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS lists_config (
     price         	VARCHAR(8)    	NOT NULL,
     age 	        VARCHAR(4)      NOT NULL,
     countplayers    VARCHAR(6)      NOT NULL,
-    timesession     VARCHAR(5)      NOT NULL
+    timesession     VARCHAR(5)      NOT NULL,
+    switch          VARCHAR(1)      NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS lists_users (

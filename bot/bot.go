@@ -9,23 +9,32 @@ import (
 	"github.com/looplab/fsm"
 )
 
-func Init(botsecretkey string) (*telegramBot.BotAPI, error) {
-	bot, err := telegramBot.NewBotAPI(botsecretkey)
-	bot.Debug = true
-	return bot, err
+type Bot struct {
+	telegramBot *telegramBot.BotAPI
+	conn        *sql.DB
+	update      *telegramBot.Update
+	fsm         *fsm.FSM
+	msg         telegramBot.MessageConfig
+	ctx         context.Context
 }
 
-func Start(conn *sql.DB, bot *telegramBot.BotAPI) {
+func (bot *Bot) Init(botsecretkey string, conn *sql.DB) (err error) {
+	bot.telegramBot, err = telegramBot.NewBotAPI(botsecretkey)
+	bot.conn = conn
+	bot.telegramBot.Debug = true
+	return err
+}
+
+func (bot *Bot) Start() {
 	updateConfig := telegramBot.NewUpdate(0)
 	updateConfig.Timeout = 30
-	updates := bot.GetUpdatesChan(updateConfig)
-
-	handleUpdates(bot, conn, updates)
+	updates := bot.telegramBot.GetUpdatesChan(updateConfig)
+	bot.handleUpdates(updates)
 }
 
-func handleUpdates(bot *telegramBot.BotAPI, conn *sql.DB, updates telegramBot.UpdatesChannel) {
-	var ctx = context.Background()
-	fsm := fsm.NewFSM(
+func (bot *Bot) handleUpdates(updates telegramBot.UpdatesChannel) {
+	bot.ctx = context.Background()
+	bot.fsm = fsm.NewFSM(
 		"start",
 		fsm.Events{
 			{Name: FilterMenu.Keyboard[0][0].Text, Src: []string{"start"}, Dst: "updatePrice"},
@@ -40,6 +49,9 @@ func handleUpdates(bot *telegramBot.BotAPI, conn *sql.DB, updates telegramBot.Up
 			{Name: FilterMenu.Keyboard[0][3].Text, Src: []string{"start"}, Dst: "updateTimesession"},
 			{Name: "cancel", Src: []string{"updateTimesession"}, Dst: "start"},
 
+			{Name: FilterMenu.Keyboard[1][0].Text, Src: []string{"start"}, Dst: "updateStatusFilter"},
+			{Name: "cancel", Src: []string{"updateStatusFilter"}, Dst: "start"},
+
 			{Name: SearchMenu.Keyboard[0][0].Text, Src: []string{"start"}, Dst: "search"},
 			{Name: "cancel", Src: []string{"search"}, Dst: "start"},
 		},
@@ -50,16 +62,17 @@ func handleUpdates(bot *telegramBot.BotAPI, conn *sql.DB, updates telegramBot.Up
 		if update.Message == nil {
 			continue
 		}
-
 		if update.Message.IsCommand() {
-			err := handleCommand(bot, conn, &update)
+			bot.update = &update
+			err := bot.handleCommand()
 			if err != nil {
 				slog.Warn(err.Error())
 				continue
 			}
 			continue
 		} else {
-			err := handleKeyboardButton(bot, conn, &update, ctx, fsm)
+			bot.update = &update
+			err := bot.handleKeyboardButton()
 			if err != nil {
 				slog.Warn(err.Error())
 				continue
