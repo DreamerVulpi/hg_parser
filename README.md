@@ -1,6 +1,6 @@
 # Project HG_Parser
 
-Проект по парсингу сайта магазина настольных игр [HobbyGames](hobbygames.ru).
+Проект по парсингу сайта магазина настольных игр hobbygames.ru
 
 > Stack: Golang, Colly, FSM, TelegramAPI, Viper, Postgres
 
